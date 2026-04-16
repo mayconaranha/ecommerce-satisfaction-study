@@ -1,62 +1,50 @@
 # Determinantes da Insatisfação no E-commerce: Um Estudo de Caso de Modelagem Preditiva
 
-Este repositório apresenta um estudo detalhado sobre o comportamento do consumidor, utilizando dados públicos da **Olist** (Brazilian E-Commerce Public Dataset). O objetivo é identificar e quantificar os fatores operacionais e logísticos que determinam as avaliações negativas dos clientes (Scores 1 e 2) por meio de modelagem estatística avançada.
+Estudo de caso aplicado utilizando dados públicos da **Olist** (Brazilian E-Commerce Public Dataset). O objetivo é identificar e quantificar os fatores operacionais e logísticos que determinam as avaliações negativas dos clientes (Scores 1 e 2) por meio de regressão para dados de contagem.
 
 ## Descobertas Centrais
 
-*   **Logística e Performance**: Cada dia de atraso na entrega aumenta a taxa de insatisfação em **4,45%**.
-*   **Impacto do Frete**: Cada R$ 1,00 adicional no custo do frete eleva a probabilidade de um review negativo em **0,54%**.
-*   **Variabilidade por Categoria**: As categorias de Telefonia e Móveis/Decoração apresentam taxas de insatisfação significativamente superiores à média do marketplace.
+- **Logística e Reputação**: cada dia de atraso na entrega aumenta a taxa de insatisfação em **4,45%**.
+- **Gestão de Frete**: cada R$ 1,00 adicional no custo do frete eleva a taxa de reviews negativos em **0,54%**.
+- **Sensibilidade por Categoria**: Telefonia (+35,7%), Cama/Mesa/Banho (+31,1%) e Móveis/Decoração (+27,0%) apresentam taxas significativamente superiores ao grupo de referência.
+- **Modelo Binomial Negativo** reduz o AIC em **6,75%** em relação ao Poisson, com LR Test χ²=492,0 (p<0,001).
 
 ---
 
-## Resultados e Significância Estatística
+## Resultados do Modelo Final
 
-| Variável | Efeito na Taxa de Insatisfação | Significância (p-valor) |
-| :--- | :--- | :--- |
-| **Atraso Médio na Entrega** | **+4,45% por dia** | < 0.001 |
-| **Custo Médio do Frete** | **+0.54% a cada R$ 1** | < 0.001 |
-| **Categoria: Telefonia** | **+35,7%** | < 0.001 |
-| **Categoria: Cama/Mesa/Banho** | **+31,1%** | < 0.001 |
+| Variável | IRR | Efeito na Taxa | p-valor |
+| :--- | :---: | :--- | :---: |
+| Atraso médio na entrega (dias) | 1,0445 | +4,45% por dia | < 0,001 |
+| Frete médio (R$) | 1,0054 | +0,54% por R$ 1 | < 0,001 |
+| Categoria: Telefonia | 1,3568 | +35,7% | < 0,001 |
+| Categoria: Cama/Mesa/Banho | 1,3108 | +31,1% | < 0,001 |
+| Categoria: Móveis e Decoração | 1,2696 | +27,0% | < 0,001 |
 
-> [!NOTE]
-> Variáveis como o **Ticket Médio** do pedido e a **Localização do Vendedor** não apresentaram significância estatística no modelo final, indicando que a insatisfação é primariamente impulsionada pela eficiência da malha logística.
-
----
-
-## Metodologia Científica
-
-### Modelagem de Dados de Contagem
-Avaliações de usuários constituem dados de contagem (valores inteiros não negativos). Modelos de regressão linear tradicional não capturam a natureza estocástica desses dados, e a regressão de Poisson requer a condição de equidispersão (Média = Variância). Neste estudo, foi detectada uma forte **sobredispersão** (Variância/Média ≈ 52,9), inviabilizando o uso do modelo de Poisson.
-
-### Implementação: Regressão Binomial Negativa (NB2)
-Para contornar a sobredispersão, foi implementado um modelo **Binomial Negativo (NB2)** com um **Offset de Exposição** (logaritmo do total de reviews por vendedor). Esta abordagem permite modelar a **taxa de incidência** de reviews negativos, normalizando a análise entre vendedores com volumes de transação distintos.
+> **IRR = Incidence Rate Ratio = exp(β).** Valores acima de 1,0 indicam aumento na taxa de avaliações negativas em relação ao grupo de referência, mantidas as demais variáveis constantes.
 
 ---
 
-## Análise Visual dos Resultados
+## Metodologia
 
-Abaixo apresentamos as principais descobertas extraídas diretamente dos outputs dos notebooks de análise:
+### Por que Binomial Negativa?
 
-### 1. Dinâmica de Variáveis (Correlação)
-A matriz de correlação revela a interdependência entre os fatores operacionais. Nota-se uma correlação positiva moderada entre atraso e insatisfação, enquanto o ticket médio apresenta baixa influência direta isolada.
+Avaliações de clientes são dados de contagem (inteiros não negativos). A regressão de Poisson exige equidispersão (Variância = Média), condição violada neste dataset: o teste de Cameron-Trivedi confirmou sobredispersão com t=6,295 (p<0,001) e o parâmetro α=0,1147 (Pearson χ²/df: 1,789 no Poisson vs 1,061 no BN).
 
-![Matriz de Correlação](images/eda_correlacao.png)
+### Offset de Exposição
 
-### 2. Impacto Regional: O Caso de Rondônia (RO)
-A análise geográfica demonstra uma disparidade significativa. Vendedores baseados em Rondônia apresentam uma densidade de reviews negativos superior à média nacional, evidenciando o gargalo logístico em regiões distantes do Sudeste.
+O modelo inclui `log(n_reviews)` como offset, normalizando a análise pela exposição de cada vendedor. Isso permite comparar a **taxa de insatisfação** entre vendedores com volumes de transação distintos, e não apenas o volume bruto de reviews negativos.
 
-![Densidade por UF](images/eda_negativos_por_estado.png)
+### Seleção de Variáveis
 
-### 3. Modelagem Preditiva (Forest Plot - IRR)
-Utilizando a **Regressão Binomial Negativa**, quantificamos o risco relativo (*Incidence Rate Ratio*). O gráfico abaixo mostra que categorias como **Telefonia** possuem ~35% mais risco de gerar avaliações negativas do que o grupo de controle, mesmo sob as mesmas condições de frete.
+Partindo de um modelo completo com 29 variáveis (estados, categorias, métricas operacionais), o modelo reduzido foi selecionado por critério AIC com VIF < 5 para todos os preditores retidos.
 
-![Forest Plot de IRR](images/interp_coeficientes.png)
-
-### 4. Diagnóstico do Modelo
-A análise de resíduos confirma que a escolha pela distribuição Binomial Negativa (NB2) foi acertada para lidar com a **sobredispersão** dos dados (Razão Variância/Média ≈ 52,9), mantendo a integridade das inferências estatísticas.
-
-![Diagnóstico de Resíduos](images/interp_diagnostico_residuos.png)
+| Métrica | Poisson | BN Reduzido |
+| :--- | :---: | :---: |
+| AIC | 7.488,7 | **6.983,0** |
+| BIC | 7.647,3 | **7.015,8** |
+| Pearson χ²/df | 1,789 | **1,061** |
+| Parâmetros | 29 | **6** |
 
 ---
 
@@ -64,28 +52,27 @@ A análise de resíduos confirma que a escolha pela distribuição Binomial Nega
 
 ```
 .
-├── notebooks/                     # Fluxo completo da análise
-│   ├── 01_preparacao.ipynb        # ETL e Engenharia de Atributos
-│   ├── 02_eda.ipynb               # Análise Exploratória e Visualizações
-│   ├── 03_modelagem.ipynb         # Seleção e Ajuste do Modelo NB2
-│   └── 04_interpretacao.ipynb     # Diagnóstico e Insights Finais
-├── data/                          # Datasets (Agregado e Placeholder)
-├── images/                        # Outputs visuais para documentação
-├── outputs/                       # Resultados técnicos (CSV/JSON)
-├── .gitignore                     # Configurações de exclusão
-└── requirements.txt               # Dependências do projeto
+├── notebooks/
+│   ├── 01_preparacao.ipynb    # ETL e engenharia de atributos
+│   ├── 02_eda.ipynb           # Análise exploratória e visualizações
+│   ├── 03_modelagem.ipynb     # Ajuste e seleção do modelo NB2
+│   └── 04_interpretacao.ipynb # Diagnóstico, IRR e insights finais
+├── data/                      # Dataset consolidado por vendedor
+├── requirements.txt           # Dependências do projeto
+└── .gitignore
 ```
 
 ## Como Executar
 
-1.  Clone o repositório.
-2.  Instale as dependências: `pip install -r requirements.txt`.
-3.  Execute os notebooks na ordem numérica (`01` a `04`).
-4.  O dataset consolidado já está incluso em `data/` para execução imediata do modelo.
+1. Clone o repositório.
+2. Instale as dependências: `pip install -r requirements.txt`
+3. Execute os notebooks na ordem numérica (`01` → `04`).
+4. O dataset consolidado já está incluso em `data/` para execução imediata.
 
 ## Fonte dos Dados
-[Olist Public Dataset (Kaggle)](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
+
+[Olist Brazilian E-Commerce Public Dataset — Kaggle](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
 
 ---
-**Autor:** Maycon Aranha
-**Contato:** [LinkedIn](https://www.linkedin.com/in/maycon-aranha/)
+
+**Autor:** Maycon Aranha | [LinkedIn](https://www.linkedin.com/in/maycon-aranha/) | MBA em Data Science e Analytics — USP/ESALQ
