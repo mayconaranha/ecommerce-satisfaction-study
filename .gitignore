@@ -1,7 +1,6 @@
 linkedin_assets/
 data/
 !data/dataset_vendedores.csv
-outputs/
 .ipynb_checkpoints/
 __pycache__/
 gerar_gifs.py
